@@ -11,7 +11,7 @@ import * as SecureStore from 'expo-secure-store'
 const storage = {
   getItem: async (key: string) => {
     if (Platform.OS === 'web') return localStorage.getItem(key)
-    return storage.getItem(key)
+    return SecureStore.getItemAsync(key)
   },
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') { localStorage.setItem(key, value); return }
@@ -19,7 +19,7 @@ const storage = {
   },
   deleteItem: async (key: string) => {
     if (Platform.OS === 'web') { localStorage.removeItem(key); return }
-    return storage.deleteItem(key)
+    return SecureStore.deleteItemAsync(key)
   },
 }
 import {

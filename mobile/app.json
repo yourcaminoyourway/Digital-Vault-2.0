@@ -4,13 +4,8 @@
     "slug": "digital-vault-2",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "scheme": "digitalvault",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#6366f1"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.digitalvault.app"

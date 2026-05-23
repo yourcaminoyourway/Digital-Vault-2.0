@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+  process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.3:3000'
 
 export const API_ENDPOINTS = {
   login: `${API_BASE_URL}/api/auth/login`,

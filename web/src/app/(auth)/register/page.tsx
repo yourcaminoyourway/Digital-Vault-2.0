@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Shield, Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
+import { Shield, Eye, EyeOff, AlertCircle, Check, X } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -24,6 +24,11 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (passwordChecks.some((c) => !c.valid)) {
+      setError('Password does not meet all requirements')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -154,10 +159,13 @@ export default function RegisterPage() {
                     <div
                       key={label}
                       className={`flex items-center gap-1.5 text-xs ${
-                        valid ? 'text-green-600' : 'text-gray-400'
+                        valid ? 'text-green-600' : 'text-red-500'
                       }`}
                     >
-                      <Check className="w-3 h-3 flex-shrink-0" />
+                      {valid
+                        ? <Check className="w-3 h-3 flex-shrink-0" />
+                        : <X className="w-3 h-3 flex-shrink-0" />
+                      }
                       {label}
                     </div>
                   ))}

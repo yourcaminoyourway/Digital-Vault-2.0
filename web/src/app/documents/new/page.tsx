@@ -62,12 +62,14 @@ export default function NewDocumentPage() {
           body: formData,
         })
 
-        if (!uploadRes.ok) {
-          const uploadData = await uploadRes.json()
-          throw new Error(uploadData.error ?? 'File upload failed')
-        }
-
         const uploadData = await uploadRes.json()
+
+        if (!uploadRes.ok) {
+          if (uploadRes.status === 503) {
+            throw new Error('File storage is not configured yet. Remove the file and save the document without an attachment, or contact the administrator.')
+          }
+          throw new Error(uploadData.error ?? 'File upload failed. Please try again.')
+        }
         fileData = uploadData.data
         setUploading(false)
       }
@@ -98,7 +100,9 @@ export default function NewDocumentPage() {
 
       router.push(`/documents/${data.data.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      const isJsInternalError = msg.includes('body stream') || msg.includes('Failed to execute')
+      setError(isJsInternalError ? 'Could not connect to server. Please try again.' : msg)
       setUploading(false)
     } finally {
       setSubmitting(false)
@@ -221,7 +225,7 @@ export default function NewDocumentPage() {
             {/* File upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Attach File
+                Attach File <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               {file ? (
                 <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">

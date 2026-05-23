@@ -29,6 +29,13 @@ export async function POST(request: NextRequest) {
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const key = `documents/${session.userId}/${timestamp}-${sanitizedName}`
 
+    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
+      return NextResponse.json(
+        { error: 'File storage not configured. Create the document without a file.' },
+        { status: 503 }
+      )
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileUrl = await uploadFile(buffer, key, file.type)
 

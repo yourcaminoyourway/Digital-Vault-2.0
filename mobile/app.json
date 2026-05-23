@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "digitalvault",
     "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.digitalvault.app"

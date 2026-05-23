@@ -1,17 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import {
-  Shield,
-  LayoutDashboard,
-  FileText,
-  User,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react'
+import { Shield, LayoutDashboard, FileText, User, LogOut, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const navLinks = [
@@ -25,6 +17,14 @@ export default function Navbar() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [user, setUser] = useState<{ fullName: string; email: string; role: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.data) setUser(d.data) })
+      .catch(() => {})
+  }, [])
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -33,11 +33,17 @@ export default function Navbar() {
       router.push('/')
       router.refresh()
     } catch {
-      // ignore
     } finally {
       setLoggingOut(false)
     }
   }
+
+  const initials = user?.fullName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) ?? '?'
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -72,15 +78,26 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Logout button (desktop) */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* User + Logout (desktop) */}
+          <div className="hidden md:flex items-center gap-3">
+            {user && (
+              <Link href="/profile" className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  {initials}
+                </div>
+                <div className="text-left hidden lg:block">
+                  <p className="text-sm font-medium text-gray-900 leading-none">{user.fullName}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-none">{user.role}</p>
+                </div>
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               disabled={loggingOut}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
             >
               <LogOut className="w-4 h-4" />
-              {loggingOut ? 'Logging out...' : 'Logout'}
+              <span className="hidden lg:inline">{loggingOut ? 'Logging out...' : 'Logout'}</span>
             </button>
           </div>
 
@@ -97,6 +114,17 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-1">
+          {user && (
+            <div className="flex items-center gap-3 px-3 py-2 mb-2 bg-gray-50 rounded-lg">
+              <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {initials}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
+                <p className="text-xs text-gray-400">{user.email}</p>
+              </div>
+            </div>
+          )}
           {navLinks.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

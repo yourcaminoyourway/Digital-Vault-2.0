@@ -5,7 +5,23 @@ import React, {
   useEffect,
   useCallback,
 } from 'react'
+import { Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
+
+const storage = {
+  getItem: async (key: string) => {
+    if (Platform.OS === 'web') return localStorage.getItem(key)
+    return storage.getItem(key)
+  },
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return }
+    return SecureStore.setItemAsync(key, value)
+  },
+  deleteItem: async (key: string) => {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return }
+    return storage.deleteItem(key)
+  },
+}
 import {
   login as apiLogin,
   register as apiRegister,
@@ -44,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync('auth-token')
+      const token = await storage.getItem('auth-token')
       if (!token) {
         setIsLoading(false)
         return
@@ -54,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.data)
       }
     } catch {
-      await SecureStore.deleteItemAsync('auth-token')
+      await storage.deleteItem('auth-token')
     } finally {
       setIsLoading(false)
     }

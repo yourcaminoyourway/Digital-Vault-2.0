@@ -1,8 +1,24 @@
 import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 import { API_BASE_URL } from '../constants/api'
 
 const TOKEN_KEY = 'auth-token'
+
+const storage = {
+  getItem: async (key: string) => {
+    if (Platform.OS === 'web') return localStorage.getItem(key)
+    return SecureStore.getItemAsync(key)
+  },
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return }
+    return SecureStore.setItemAsync(key, value)
+  },
+  deleteItem: async (key: string) => {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return }
+    return SecureStore.deleteItemAsync(key)
+  },
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -15,7 +31,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY)
+      const token = await storage.getItem(TOKEN_KEY)
       if (token) {
         config.headers.Cookie = `auth-token=${token}`
         config.headers['Authorization'] = `Bearer ${token}`
@@ -38,7 +54,7 @@ apiClient.interceptors.response.use(
         : setCookie
       const match = cookieHeader.match(/auth-token=([^;]+)/)
       if (match && match[1]) {
-        await SecureStore.setItemAsync(TOKEN_KEY, match[1])
+        await storage.setItem(TOKEN_KEY, match[1])
       }
     }
     return response
@@ -69,7 +85,7 @@ export async function logout() {
   try {
     await apiClient.post('/api/auth/logout')
   } finally {
-    await SecureStore.deleteItemAsync(TOKEN_KEY)
+    await storage.deleteItem(TOKEN_KEY)
   }
 }
 
@@ -80,7 +96,7 @@ export async function getMe() {
 
 // Token helpers
 export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY)
+  return storage.getItem(TOKEN_KEY)
 }
 
 export async function saveToken(token: string): Promise<void> {
@@ -88,7 +104,7 @@ export async function saveToken(token: string): Promise<void> {
 }
 
 export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY)
+  await storage.deleteItem(TOKEN_KEY)
 }
 
 // Documents

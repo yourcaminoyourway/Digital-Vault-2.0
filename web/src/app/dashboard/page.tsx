@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, FolderOpen, Share2, Eye, Plus, ArrowRight } from 'lucide-react'
+import { FileText, FolderOpen, Globe, Eye, Plus, ArrowRight } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import StatsCard from '@/components/stats-card'
 import CategoryBadge from '@/components/category-badge'
@@ -8,8 +8,8 @@ import { getSession } from '@/lib/auth'
 import { getUserById } from '@/services/userService'
 import { getDocumentStats, getRecentDocuments } from '@/services/documentService'
 import { db } from '@/lib/db'
-import { categories, documentShares } from '@/lib/db/schema'
-import { eq, count } from 'drizzle-orm'
+import { categories, documents } from '@/lib/db/schema'
+import { eq, count, and } from 'drizzle-orm'
 
 export const metadata = { title: 'Dashboard' }
 
@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [user, stats, recentDocs, categoryCount, shareCount] = await Promise.all([
+  const [user, stats, recentDocs, categoryCount, publicDocCount] = await Promise.all([
     getUserById(session.userId),
     getDocumentStats(session.userId),
     getRecentDocuments(session.userId, 5),
@@ -28,7 +28,8 @@ export default async function DashboardPage() {
       .then((r) => r[0]?.count ?? 0),
     db
       .select({ count: count() })
-      .from(documentShares)
+      .from(documents)
+      .where(and(eq(documents.userId, session.userId), eq(documents.isPublic, true)))
       .then((r) => r[0]?.count ?? 0),
   ])
 
@@ -72,9 +73,9 @@ export default async function DashboardPage() {
             color="amber"
           />
           <StatsCard
-            icon={Share2}
-            title="Shared Docs"
-            value={shareCount}
+            icon={Globe}
+            title="Public Documents"
+            value={publicDocCount}
             color="green"
           />
           <StatsCard

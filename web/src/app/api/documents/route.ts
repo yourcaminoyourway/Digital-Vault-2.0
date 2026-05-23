@@ -27,12 +27,16 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
     const search = searchParams.get('search') ?? undefined
     const categoryId = searchParams.get('categoryId') ?? undefined
+    const sortBy = (searchParams.get('sortBy') ?? 'createdAt') as 'createdAt' | 'title' | 'viewCount'
+    const sortOrder = (searchParams.get('sortOrder') ?? 'desc') as 'asc' | 'desc'
 
     const result = await getDocuments(session.userId, {
       page,
       limit,
       search,
       categoryId,
+      sortBy,
+      sortOrder,
     })
 
     return NextResponse.json(result)

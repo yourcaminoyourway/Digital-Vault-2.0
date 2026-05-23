@@ -1,19 +1,26 @@
 import { db } from '@/lib/db'
 import { documents, categories } from '@/lib/db/schema'
-import { eq, and, or, ilike, sql, desc, count } from 'drizzle-orm'
+import { eq, and, or, ilike, sql, desc, count, asc } from 'drizzle-orm'
 import type { DocumentFilters, CreateDocumentInput, UpdateDocumentInput } from '@/types'
 
 export async function getDocuments(
   userId: string,
   filters: DocumentFilters = {}
 ) {
-  const { search, categoryId, page = 1, limit = 20 } = filters
+  const { search, categoryId, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters
   const offset = (page - 1) * limit
 
   const conditions = [eq(documents.userId, userId)]
 
   if (search) {
-    conditions.push(ilike(documents.title, `%${search}%`))
+    conditions.push(
+      or(
+        ilike(documents.title, `%${search}%`),
+        ilike(documents.description, `%${search}%`),
+        sql`array_to_string(${documents.tags}, ' ') ilike ${'%' + search + '%'}`,
+        ilike(categories.name, `%${search}%`),
+      )!
+    )
   }
 
   if (categoryId) {
@@ -45,12 +52,17 @@ export async function getDocuments(
       .from(documents)
       .leftJoin(categories, eq(documents.categoryId, categories.id))
       .where(whereClause)
-      .orderBy(desc(documents.createdAt))
+      .orderBy(
+        sortOrder === 'asc'
+          ? asc(sortBy === 'title' ? documents.title : sortBy === 'viewCount' ? documents.viewCount : documents.createdAt)
+          : desc(sortBy === 'title' ? documents.title : sortBy === 'viewCount' ? documents.viewCount : documents.createdAt)
+      )
       .limit(limit)
       .offset(offset),
     db
       .select({ count: count() })
       .from(documents)
+      .leftJoin(categories, eq(documents.categoryId, categories.id))
       .where(whereClause),
   ])
 

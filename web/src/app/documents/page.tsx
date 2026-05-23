@@ -41,6 +41,8 @@ export default function DocumentsPage() {
   const page = parseInt(searchParams.get('page') ?? '1')
   const search = searchParams.get('search') ?? ''
   const categoryId = searchParams.get('categoryId') ?? ''
+  const sortBy = searchParams.get('sortBy') ?? 'createdAt'
+  const sortOrder = searchParams.get('sortOrder') ?? 'desc'
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true)
@@ -51,6 +53,8 @@ export default function DocumentsPage() {
       })
       if (search) params.set('search', search)
       if (categoryId) params.set('categoryId', categoryId)
+      if (sortBy) params.set('sortBy', sortBy)
+      if (sortOrder) params.set('sortOrder', sortOrder)
 
       const response = await fetch(`/api/documents?${params}`)
       const data = await response.json()
@@ -148,6 +152,20 @@ export default function DocumentsPage() {
                 {cat.name}
               </option>
             ))}
+          </select>
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [by, order] = e.target.value.split('-')
+              updateParams({ sortBy: by, sortOrder: order })
+            }}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="createdAt-desc">Newest first</option>
+            <option value="createdAt-asc">Oldest first</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+            <option value="viewCount-desc">Most viewed</option>
           </select>
         </div>
 

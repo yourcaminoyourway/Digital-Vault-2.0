@@ -18,6 +18,8 @@ export type DocumentFilters = {
   isPublic?: boolean
   page?: number
   limit?: number
+  sortBy?: 'createdAt' | 'title' | 'viewCount'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export type CreateDocumentInput = {

@@ -2,15 +2,10 @@
   "name": "digital-vault-2.0",
   "private": true,
   "workspaces": [
-    "web",
-    "mobile"
+    "web"
   ],
   "scripts": {
     "web": "npm run dev --workspace=web",
-    "mobile": "npm run start --workspace=mobile"
-  },
-  "dependencies": {
-    "@expo/metro-runtime": "~3.2.3",
-    "react-native-web": "~0.19.10"
+    "mobile": "cd mobile && npm start"
   }
 }

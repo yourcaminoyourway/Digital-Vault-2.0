@@ -27,13 +27,12 @@ export const apiClient = axios.create({
   },
 })
 
-// Request interceptor: attach auth token
+// Request interceptor: attach auth token as Bearer (works for both web + native)
 apiClient.interceptors.request.use(
   async (config) => {
     try {
       const token = await storage.getItem(TOKEN_KEY)
       if (token) {
-        config.headers.Cookie = `auth-token=${token}`
         config.headers['Authorization'] = `Bearer ${token}`
       }
     } catch {

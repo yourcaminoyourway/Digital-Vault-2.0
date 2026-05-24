@@ -1,8 +1,32 @@
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { useFonts } from 'expo-font'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { View, ActivityIndicator } from 'react-native'
 import { AuthProvider } from '../context/AuthContext'
 
 export default function RootLayout() {
+  // Pre-load Ionicons font so icons render immediately and avoid
+  // the asset-fetch race that produces "Unable to download asset" errors.
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  })
+
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f0f4ff',
+        }}
+      >
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    )
+  }
+
   return (
     <AuthProvider>
       <StatusBar style="auto" />

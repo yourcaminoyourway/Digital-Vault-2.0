@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { hashPassword, signToken, setAuthCookie } from '@/lib/auth'
 import { getUserByEmail, createUser } from '@/services/userService'
+import { db } from '@/lib/db'
+import { categories } from '@/lib/db/schema'
+
+const DEFAULT_CATEGORIES = [
+  { name: 'Personal', color: '#6366f1' },
+  { name: 'Work', color: '#10b981' },
+  { name: 'Finance', color: '#f59e0b' },
+  { name: 'Other', color: '#8b5cf6' },
+]
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -37,6 +46,16 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password)
     const user = await createUser({ email, passwordHash, fullName, role: 'user', isActive: true })
+
+    // Seed default categories so new users have something to organize with
+    try {
+      await db.insert(categories).values(
+        DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id }))
+      )
+    } catch (catErr) {
+      console.error('Failed to seed default categories:', catErr)
+      // non-fatal — user can create their own
+    }
 
     const token = await signToken({
       userId: user.id,

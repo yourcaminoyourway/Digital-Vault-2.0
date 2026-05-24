@@ -14,6 +14,13 @@ const createCategorySchema = z.object({
     .default('#6366f1'),
 })
 
+const DEFAULT_CATEGORIES = [
+  { name: 'Personal', color: '#6366f1' },
+  { name: 'Work', color: '#10b981' },
+  { name: 'Finance', color: '#f59e0b' },
+  { name: 'Other', color: '#8b5cf6' },
+]
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession(request)
@@ -21,11 +28,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const userCategories = await db
+    let userCategories = await db
       .select()
       .from(categories)
       .where(eq(categories.userId, session.userId))
       .orderBy(desc(categories.createdAt))
+
+    // Backfill default categories for users who have none yet
+    if (userCategories.length === 0) {
+      try {
+        await db.insert(categories).values(
+          DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: session.userId }))
+        )
+        userCategories = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.userId, session.userId))
+          .orderBy(desc(categories.createdAt))
+      } catch (seedErr) {
+        console.error('Failed to backfill default categories:', seedErr)
+      }
+    }
 
     return NextResponse.json({ data: userCategories })
   } catch (err) {

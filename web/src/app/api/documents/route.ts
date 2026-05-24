@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { getDocuments, createDocument } from '@/services/documentService'
+
+// Always run fresh — never serve stale cached data
+export const dynamic = 'force-dynamic'
 
 const createDocumentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
@@ -67,6 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     const document = await createDocument(session.userId, result.data)
+
+    revalidatePath('/documents')
+    revalidatePath('/dashboard')
 
     return NextResponse.json({ data: document }, { status: 201 })
   } catch (err) {

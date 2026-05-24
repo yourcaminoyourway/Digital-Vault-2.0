@@ -38,14 +38,20 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Stats>({ total: 0 })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string>('')
 
   async function fetchData() {
     try {
       const data = await getDocuments(1, 5)
       setRecentDocs(data.documents ?? [])
       setStats({ total: data.total ?? 0 })
-    } catch {
-      // ignore
+      setError('')
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Could not load documents — pull down to retry'
+      setError(message)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -122,6 +128,15 @@ export default function HomeScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Recent Documents</Text>
+
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={fetchData}>
+                <Text style={styles.errorRetry}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </>
       }
       data={recentDocs}
@@ -310,5 +325,27 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#d1d5db',
     lineHeight: 26,
+  },
+  errorBanner: {
+    marginTop: 4,
+    padding: 12,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#991b1b',
+  },
+  errorRetry: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#dc2626',
   },
 })

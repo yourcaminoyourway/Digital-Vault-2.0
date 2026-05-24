@@ -51,10 +51,10 @@ export default function ProfilePage() {
     setNameLoading(true)
 
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/users/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, fullName }),
+        body: JSON.stringify({ fullName }),
       })
 
       if (response.ok) {
@@ -69,6 +69,35 @@ export default function ProfilePage() {
       setNameError('Network error')
     } finally {
       setNameLoading(false)
+    }
+  }
+
+  async function handlePasswordChange(e: React.FormEvent) {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess(false)
+    setPasswordLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      if (response.ok) {
+        setPasswordSuccess(true)
+        setCurrentPassword('')
+        setNewPassword('')
+        setTimeout(() => setPasswordSuccess(false), 3000)
+      } else {
+        const data = await response.json()
+        setPasswordError(data.error ?? 'Password change failed')
+      }
+    } catch {
+      setPasswordError('Network error')
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -223,21 +252,7 @@ export default function ProfilePage() {
               Password changed successfully
             </div>
           )}
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              setPasswordError('')
-              setPasswordSuccess(false)
-              setPasswordLoading(true)
-              // Password change would require an additional API endpoint
-              // For now show a placeholder message
-              setTimeout(() => {
-                setPasswordError('Password change endpoint not yet configured')
-                setPasswordLoading(false)
-              }, 500)
-            }}
-            className="space-y-4"
-          >
+          <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Current password

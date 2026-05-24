@@ -98,6 +98,7 @@ export default function NewDocumentPage() {
         throw new Error(data.error ?? 'Failed to create document')
       }
 
+      router.refresh()
       router.push(`/documents/${data.data.id}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'

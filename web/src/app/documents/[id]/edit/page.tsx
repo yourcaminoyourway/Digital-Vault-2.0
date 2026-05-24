@@ -37,14 +37,39 @@ export default function EditDocumentPage({
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState<
+    null | 'notfound' | 'forbidden' | 'network'
+  >(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/documents/${params.id}`).then((r) => r.json()),
-      fetch('/api/categories').then((r) => r.json()),
-    ])
-      .then(([docData, catData]) => {
+    async function load() {
+      try {
+        const [docRes, catRes] = await Promise.all([
+          fetch(`/api/documents/${params.id}`),
+          fetch('/api/categories'),
+        ])
+
+        if (docRes.status === 404) {
+          setLoadError('notfound')
+          return
+        }
+        if (docRes.status === 403 || docRes.status === 401) {
+          setLoadError('forbidden')
+          return
+        }
+        if (!docRes.ok) {
+          setLoadError('network')
+          return
+        }
+
+        const docData = await docRes.json()
+        const catData = catRes.ok ? await catRes.json() : { data: [] }
+
         const doc = docData.data
+        if (!doc) {
+          setLoadError('notfound')
+          return
+        }
         setDocument(doc)
         setTitle(doc.title ?? '')
         setDescription(doc.description ?? '')
@@ -52,9 +77,13 @@ export default function EditDocumentPage({
         setIsPublic(doc.isPublic ?? false)
         setTags(doc.tags?.join(', ') ?? '')
         setCategories(catData.data ?? [])
-      })
-      .catch(() => setError('Failed to load document'))
-      .finally(() => setLoading(false))
+      } catch {
+        setLoadError('network')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [params.id])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,6 +115,8 @@ export default function EditDocumentPage({
         throw new Error(data.error ?? 'Failed to update document')
       }
 
+      // Invalidate router cache so the list + detail show fresh data
+      router.refresh()
       router.push(`/documents/${params.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -111,15 +142,50 @@ export default function EditDocumentPage({
     )
   }
 
-  if (!document) {
+  if (loadError || !document) {
+    const messages = {
+      notfound: {
+        title: 'Document not found',
+        body: "This document doesn't exist or has been deleted.",
+      },
+      forbidden: {
+        title: 'Access denied',
+        body: "You don't have permission to edit this document.",
+      },
+      network: {
+        title: 'Could not load document',
+        body: 'Check your connection and try again.',
+      },
+    }
+    const msg = messages[loadError ?? 'notfound']
+
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <main className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <p className="text-gray-500">Document not found</p>
-          <Link href="/documents" className="text-indigo-600 hover:underline mt-2 block">
-            Back to Documents
-          </Link>
+        <main className="max-w-3xl mx-auto px-4 py-12 text-center">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 inline-block">
+            <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">
+              {msg.title}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">{msg.body}</p>
+            <div className="flex gap-2 justify-center">
+              {loadError === 'network' && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  Retry
+                </button>
+              )}
+              <Link
+                href="/documents"
+                className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg"
+              >
+                Back to Documents
+              </Link>
+            </div>
+          </div>
         </main>
       </div>
     )

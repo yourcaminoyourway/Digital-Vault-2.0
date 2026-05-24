@@ -13,9 +13,9 @@ import {
 } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import CategoryBadge from '@/components/category-badge'
+import DeleteDocumentButton from '@/components/delete-document-button'
 import { getSession } from '@/lib/auth'
 import { getDocumentById, incrementViewCount } from '@/services/documentService'
-import { deleteDocumentAction } from '@/app/actions/documents'
 
 export async function generateMetadata({
   params,
@@ -91,14 +91,10 @@ export default async function DocumentDetailPage({
                     <Edit className="w-4 h-4" />
                     Edit
                   </Link>
-                  <form action={deleteDocumentAction.bind(null, document.id)}>
-                    <button
-                      type="submit"
-                      className="px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteDocumentButton
+                    documentId={document.id}
+                    documentTitle={document.title}
+                  />
                 </div>
               )}
             </div>

@@ -44,7 +44,8 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor: extract token from set-cookie if present
+// Response interceptor: extract token from set-cookie if present;
+// normalize errors so callers get a useful message
 apiClient.interceptors.response.use(
   async (response) => {
     const setCookie = response.headers['set-cookie']
@@ -59,7 +60,25 @@ apiClient.interceptors.response.use(
     }
     return response
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    // Prefer the server's error message when available
+    const serverMessage =
+      error?.response?.data?.error ?? error?.response?.data?.message
+    if (serverMessage) {
+      const normalized = new Error(serverMessage)
+      // preserve status for callers that want to branch
+      ;(normalized as Error & { status?: number }).status =
+        error?.response?.status
+      return Promise.reject(normalized)
+    }
+    // No response at all → network/server unreachable
+    if (!error?.response) {
+      return Promise.reject(
+        new Error("Can't reach the server. Check your connection.")
+      )
+    }
+    return Promise.reject(error)
+  }
 )
 
 // Auth functions

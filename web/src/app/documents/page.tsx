@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, FileText } from 'lucide-react'
+import { Plus, FileText, AlertCircle, X } from 'lucide-react'
 import Navbar from '@/components/navbar'
 import DocumentCard from '@/components/document-card'
 import Pagination from '@/components/pagination'
@@ -36,6 +36,7 @@ export default function DocumentsPage() {
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>('')
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
   const page = parseInt(searchParams.get('page') ?? '1')
@@ -46,6 +47,7 @@ export default function DocumentsPage() {
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -56,20 +58,24 @@ export default function DocumentsPage() {
       if (sortBy) params.set('sortBy', sortBy)
       if (sortOrder) params.set('sortOrder', sortOrder)
 
-      const response = await fetch(`/api/documents?${params}`)
-      const data = await response.json()
+      const response = await fetch(`/api/documents?${params}`, {
+        cache: 'no-store',
+      })
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setDocuments(data.documents ?? [])
         setTotal(data.total ?? 0)
         setTotalPages(data.totalPages ?? 1)
+      } else {
+        setError(data.error ?? `Could not load documents (${response.status})`)
       }
     } catch {
-      // ignore
+      setError('Network error — check your connection and try again')
     } finally {
       setLoading(false)
     }
-  }, [page, search, categoryId])
+  }, [page, search, categoryId, sortBy, sortOrder])
 
   useEffect(() => {
     fetchDocuments()
@@ -168,6 +174,29 @@ export default function DocumentsPage() {
             <option value="viewCount-desc">Most viewed</option>
           </select>
         </div>
+
+        {/* Error banner */}
+        {error && !loading && (
+          <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-red-900">{error}</p>
+              <button
+                onClick={fetchDocuments}
+                className="text-xs text-red-700 underline hover:no-underline mt-1"
+              >
+                Try again
+              </button>
+            </div>
+            <button
+              onClick={() => setError('')}
+              className="text-red-400 hover:text-red-600"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Documents grid */}
         {loading ? (

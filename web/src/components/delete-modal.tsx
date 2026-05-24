@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle, X, AlertCircle } from 'lucide-react'
 
 type DeleteModalProps = {
   isOpen: boolean
@@ -9,6 +9,7 @@ type DeleteModalProps = {
   onConfirm: () => void
   onCancel: () => void
   isLoading?: boolean
+  error?: string
 }
 
 export default function DeleteModal({
@@ -18,6 +19,7 @@ export default function DeleteModal({
   onConfirm,
   onCancel,
   isLoading = false,
+  error,
 }: DeleteModalProps) {
   if (!isOpen) return null
 
@@ -47,6 +49,13 @@ export default function DeleteModal({
             <p className="mt-1 text-sm text-gray-500">{description}</p>
           </div>
         </div>
+
+        {error && (
+          <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
 
         <div className="mt-6 flex gap-3 justify-end">
           <button

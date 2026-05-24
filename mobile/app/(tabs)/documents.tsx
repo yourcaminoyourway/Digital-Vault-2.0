@@ -37,6 +37,7 @@ export default function DocumentsScreen() {
   const [totalPages, setTotalPages] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [error, setError] = useState<string>('')
 
   const fetchDocuments = useCallback(
     async (pageNum = 1, searchTerm = search, reset = false) => {
@@ -58,8 +59,13 @@ export default function DocumentsScreen() {
 
         setTotalPages(data.totalPages ?? 1)
         setPage(pageNum)
-      } catch {
-        // ignore
+        setError('')
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : 'Network error — pull down to retry'
+        setError(message)
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -110,6 +116,15 @@ export default function DocumentsScreen() {
           returnKeyType="search"
         />
       </View>
+
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={() => fetchDocuments(1, search, true)}>
+            <Text style={styles.errorRetry}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <FlatList
         contentContainerStyle={styles.listContent}
@@ -211,5 +226,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     lineHeight: 32,
     marginTop: -2,
+  },
+  errorBanner: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#991b1b',
+  },
+  errorRetry: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#dc2626',
   },
 })

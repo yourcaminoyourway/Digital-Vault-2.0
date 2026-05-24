@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import {
@@ -8,6 +9,8 @@ import {
   incrementViewCount,
 } from '@/services/documentService'
 import { deleteFile } from '@/lib/r2'
+
+export const dynamic = 'force-dynamic'
 
 const updateDocumentSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -75,6 +78,11 @@ export async function PATCH(
       )
     }
 
+    // Invalidate cached pages that show this document
+    revalidatePath('/documents')
+    revalidatePath(`/documents/${params.id}`)
+    revalidatePath('/dashboard')
+
     return NextResponse.json({ data: document })
   } catch (err) {
     console.error('PATCH /api/documents/[id] error:', err)
@@ -119,6 +127,10 @@ export async function DELETE(
     if (existing.fileKey) {
       deleteFile(existing.fileKey).catch(console.error)
     }
+
+    // Invalidate cached pages that listed this document
+    revalidatePath('/documents')
+    revalidatePath('/dashboard')
 
     return NextResponse.json({ message: 'Document deleted successfully' })
   } catch (err) {

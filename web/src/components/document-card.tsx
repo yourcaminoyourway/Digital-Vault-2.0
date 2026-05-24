@@ -33,6 +33,7 @@ export default function DocumentCard({
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string>('')
 
   const isOwner = currentUserId === document.userId
 
@@ -43,6 +44,7 @@ export default function DocumentCard({
 
   async function handleDelete() {
     setDeleting(true)
+    setDeleteError('')
     try {
       const response = await fetch(`/api/documents/${document.id}`, {
         method: 'DELETE',
@@ -51,9 +53,14 @@ export default function DocumentCard({
         setShowDeleteModal(false)
         onDelete?.(document.id)
         router.refresh()
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setDeleteError(
+          data.error ?? `Could not delete document (${response.status})`
+        )
       }
     } catch {
-      // ignore
+      setDeleteError('Network error — please try again')
     } finally {
       setDeleting(false)
     }
@@ -158,8 +165,12 @@ export default function DocumentCard({
         title={`Delete "${document.title}"?`}
         description="This action cannot be undone. The document will be permanently deleted."
         onConfirm={handleDelete}
-        onCancel={() => setShowDeleteModal(false)}
+        onCancel={() => {
+          setShowDeleteModal(false)
+          setDeleteError('')
+        }}
         isLoading={deleting}
+        error={deleteError}
       />
     </>
   )

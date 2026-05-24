@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         fullName: user.fullName,
         role: user.role,
       },
+      token,
       message: 'Logged in successfully',
     })
 

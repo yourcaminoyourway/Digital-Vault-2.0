@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
           fullName: user.fullName,
           role: user.role,
         },
+        token,
         message: 'Account created successfully',
       },
       { status: 201 }

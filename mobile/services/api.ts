@@ -84,6 +84,10 @@ apiClient.interceptors.response.use(
 // Auth functions
 export async function login(email: string, password: string) {
   const response = await apiClient.post('/api/auth/login', { email, password })
+  // Persist token from response body (Set-Cookie isn't reliably exposed on RN)
+  if (response.data?.token) {
+    await storage.setItem(TOKEN_KEY, response.data.token)
+  }
   return response.data
 }
 
@@ -97,6 +101,9 @@ export async function register(
     password,
     fullName,
   })
+  if (response.data?.token) {
+    await storage.setItem(TOKEN_KEY, response.data.token)
+  }
   return response.data
 }
 

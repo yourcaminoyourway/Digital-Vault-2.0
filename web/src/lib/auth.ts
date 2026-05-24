@@ -52,7 +52,15 @@ export async function getSession(
   let token: string | undefined
 
   if (request) {
+    // 1. Try cookie (web)
     token = request.cookies.get('auth-token')?.value
+    // 2. Fall back to Authorization: Bearer <token> (mobile)
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim()
+      }
+    }
   } else {
     const cookieStore = await cookies()
     token = cookieStore.get('auth-token')?.value

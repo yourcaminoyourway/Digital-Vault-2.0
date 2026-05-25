@@ -10,6 +10,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router'
 import { getDocument, deleteDocument } from '../../services/api'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { useAuth } from '../../context/AuthContext'
 
 type Document = {
   id: string
@@ -30,6 +31,7 @@ type Document = {
 
 export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  const { user } = useAuth()
   const [document, setDocument] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -165,14 +167,25 @@ export default function DocumentDetailScreen() {
         </View>
       )}
 
-      {/* Delete button */}
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={handleDelete}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.deleteButtonText}>Delete Document</Text>
-      </TouchableOpacity>
+      {/* Owner actions */}
+      {user?.id === document.userId && (
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => router.push(`/document/edit/${id}`)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -311,12 +324,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4f46e5',
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: '#6366f1',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
   deleteButton: {
+    flex: 1,
     backgroundColor: '#fee2e2',
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
   },
   deleteButtonText: {
     fontSize: 16,

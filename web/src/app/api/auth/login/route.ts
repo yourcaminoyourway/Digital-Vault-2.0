@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { verifyPassword, signToken, setAuthCookie } from '@/lib/auth'
 import { getUserByEmail } from '@/services/userService'
 
+export const dynamic = 'force-dynamic'
+
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
   password: z.string().min(1, 'Password is required'),

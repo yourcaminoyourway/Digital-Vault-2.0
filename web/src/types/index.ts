@@ -24,14 +24,14 @@ export type DocumentFilters = {
 
 export type CreateDocumentInput = {
   title: string
-  description?: string
-  categoryId?: string
+  description?: string | null
+  categoryId?: string | null
   isPublic?: boolean
   tags?: string[]
-  fileUrl?: string
-  fileKey?: string
-  fileSize?: number
-  mimeType?: string
+  fileUrl?: string | null
+  fileKey?: string | null
+  fileSize?: number | null
+  mimeType?: string | null
 }
 
 export type UpdateDocumentInput = Partial<CreateDocumentInput>

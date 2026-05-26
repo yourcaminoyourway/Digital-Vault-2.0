@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, FileText, AlertCircle, X } from 'lucide-react'
@@ -29,6 +29,23 @@ type Category = {
 }
 
 export default function DocumentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50">
+          <Navbar />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="animate-pulse h-8 bg-gray-200 rounded w-32" />
+          </main>
+        </div>
+      }
+    >
+      <DocumentsPageContent />
+    </Suspense>
+  )
+}
+
+function DocumentsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [documents, setDocuments] = useState<Document[]>([])

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { updateUser } from '@/services/userService'
 
+export const dynamic = 'force-dynamic'
+
 const updateMeSchema = z.object({
   fullName: z
     .string()

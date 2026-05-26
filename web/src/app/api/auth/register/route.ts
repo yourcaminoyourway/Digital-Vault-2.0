@@ -5,6 +5,8 @@ import { getUserByEmail, createUser } from '@/services/userService'
 import { db } from '@/lib/db'
 import { categories } from '@/lib/db/schema'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_CATEGORIES = [
   { name: 'Personal', color: '#6366f1' },
   { name: 'Work', color: '#10b981' },

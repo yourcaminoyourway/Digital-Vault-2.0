@@ -53,12 +53,12 @@ export const documents = pgTable('documents', {
   viewCount: integer('view_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => [
-  index('idx_documents_user_id').on(t.userId),
-  index('idx_documents_category_id').on(t.categoryId),
-  index('idx_documents_created_at').on(t.createdAt),
-  index('idx_documents_is_public').on(t.isPublic),
-])
+}, (t) => ({
+  userIdIdx: index('idx_documents_user_id').on(t.userId),
+  categoryIdIdx: index('idx_documents_category_id').on(t.categoryId),
+  createdAtIdx: index('idx_documents_created_at').on(t.createdAt),
+  isPublicIdx: index('idx_documents_is_public').on(t.isPublic),
+}))
 
 export const documentShares = pgTable('document_shares', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -80,10 +80,10 @@ export const auditLogs = pgTable('audit_logs', {
   resourceId: uuid('resource_id'),
   details: text('details'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (t) => [
-  index('idx_audit_logs_user_id').on(t.userId),
-  index('idx_audit_logs_created_at').on(t.createdAt),
-])
+}, (t) => ({
+  userIdIdx: index('idx_audit_logs_user_id').on(t.userId),
+  createdAtIdx: index('idx_audit_logs_created_at').on(t.createdAt),
+}))
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert

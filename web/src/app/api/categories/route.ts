@@ -5,6 +5,8 @@ import { db } from '@/lib/db'
 import { categories } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 
+export const dynamic = 'force-dynamic'
+
 const createCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   color: z

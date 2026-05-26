@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { getAllUsers, updateUser } from '@/services/userService'
 
+export const dynamic = 'force-dynamic'
+
 const updateUserSchema = z.object({
   userId: z.string().uuid('Invalid user ID'),
   role: z.enum(['admin', 'user']).optional(),

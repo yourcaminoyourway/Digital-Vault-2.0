@@ -187,12 +187,12 @@ export default async function DocumentDetailPage({
                   href={document.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
+                  className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200 max-w-full"
                 >
-                  <Download className="w-4 h-4" />
-                  Download File
+                  <Download className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">Download File</span>
                   {document.fileSize && (
-                    <span className="text-indigo-400">
+                    <span className="text-indigo-400 flex-shrink-0">
                       ({(document.fileSize / 1024 / 1024).toFixed(1)} MB)
                     </span>
                   )}

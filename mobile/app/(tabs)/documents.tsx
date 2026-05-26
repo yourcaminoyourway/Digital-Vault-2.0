@@ -37,6 +37,7 @@ export default function DocumentsScreen() {
   const [totalPages, setTotalPages] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [error, setError] = useState<string>('')
 
   const fetchDocuments = useCallback(
@@ -107,13 +108,18 @@ export default function DocumentsScreen() {
       {/* Search bar */}
       <View style={styles.searchRow}>
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            searchFocused && styles.searchInputFocused,
+          ]}
           placeholder="Search documents..."
           placeholderTextColor="#9ca3af"
           value={searchInput}
           onChangeText={setSearchInput}
           onSubmitEditing={handleSearch}
           returnKeyType="search"
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
         />
       </View>
 
@@ -188,13 +194,22 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: '#fff',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e5e7eb',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
     color: '#111827',
+  },
+  searchInputFocused: {
+    borderColor: '#6366f1',
+    backgroundColor: '#fafbff',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 2,
   },
   listContent: {
     padding: 12,

@@ -36,11 +36,18 @@ export async function GET(request: NextRequest) {
       .where(eq(categories.userId, session.userId))
       .orderBy(desc(categories.createdAt))
 
-    // Backfill default categories for users who have none yet
-    if (userCategories.length === 0) {
+    // Backfill any missing default categories (handles users seeded
+    // before defaults existed, or partial sets)
+    const existingNames = new Set(
+      userCategories.map((c) => c.name.toLowerCase())
+    )
+    const missing = DEFAULT_CATEGORIES.filter(
+      (c) => !existingNames.has(c.name.toLowerCase())
+    )
+    if (missing.length > 0) {
       try {
         await db.insert(categories).values(
-          DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: session.userId }))
+          missing.map((c) => ({ ...c, userId: session.userId }))
         )
         userCategories = await db
           .select()

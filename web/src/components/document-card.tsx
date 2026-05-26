@@ -68,7 +68,7 @@ export default function DocumentCard({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow group">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200 group">
         <div className="flex items-start justify-between gap-3">
           <Link
             href={`/documents/${document.id}`}

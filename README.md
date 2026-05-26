@@ -7,7 +7,7 @@ A secure, multi-platform document management system for individuals and teams. S
 | | URL |
 |---|---|
 | **Web app** | https://digitalvault2.netlify.app |
-| **Mobile (web export)** | https://glistening-gecko-36e676.netlify.app |
+| **Mobile (web export)** | https://digitalvault2-mobile.netlify.app |
 | **Source** | https://github.com/yourcaminoyourway/Digital-Vault-2.0 |
 
 ### Demo credentials

@@ -13,6 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    // Fail fast if storage isn't configured — avoids confusing 500s
+    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
+      return NextResponse.json(
+        { error: 'File storage not configured. Create the document without a file.' },
+        { status: 503 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
 
@@ -30,13 +38,6 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now()
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const key = `documents/${session.userId}/${timestamp}-${sanitizedName}`
-
-    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
-      return NextResponse.json(
-        { error: 'File storage not configured. Create the document without a file.' },
-        { status: 503 }
-      )
-    }
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileUrl = await uploadFile(buffer, key, file.type)

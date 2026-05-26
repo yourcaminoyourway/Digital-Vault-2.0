@@ -65,7 +65,7 @@ export async function updateDocumentAction(id: string, formData: FormData) {
   const document = await updateDocument(id, session.userId, {
     title: title || undefined,
     description,
-    categoryId: categoryId || null,
+    categoryId: categoryId || undefined,
     isPublic,
     tags,
   })

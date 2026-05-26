@@ -2,6 +2,23 @@
 
 A secure, multi-platform document management system for individuals and teams. Store, organize, and share documents with role-based access control, full-text search, and cloud file storage.
 
+## 🚀 Live Demo
+
+| | URL |
+|---|---|
+| **Web app** | https://digitalvault2.netlify.app |
+| **Mobile (web export)** | https://glistening-gecko-36e676.netlify.app |
+| **Source** | https://github.com/yourcaminoyourway/Digital-Vault-2.0 |
+
+### Demo credentials
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@digitalvault.com` | `Admin123!` |
+| User | `user@digitalvault.com` | `User123!` |
+
+Or register your own account at the live URL.
+
 ## Architecture
 
 ```

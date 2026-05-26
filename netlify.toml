@@ -8,3 +8,12 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# CORS headers for the API so the deployed mobile-web client can call it
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PATCH, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Credentials = "true"

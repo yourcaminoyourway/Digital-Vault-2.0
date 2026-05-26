@@ -5,8 +5,30 @@ import { verifyToken } from '@/lib/auth'
 const PROTECTED_ROUTES = ['/dashboard', '/documents', '/profile', '/admin']
 const ADMIN_ROUTES = ['/admin']
 
+function withCors(response: NextResponse): NextResponse {
+  response.headers.set('Access-Control-Allow-Origin', '*')
+  response.headers.set(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PATCH, DELETE, OPTIONS'
+  )
+  response.headers.set(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization'
+  )
+  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  return response
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Handle CORS preflight for API routes
+  if (pathname.startsWith('/api/')) {
+    if (request.method === 'OPTIONS') {
+      return withCors(new NextResponse(null, { status: 204 }))
+    }
+    return withCors(NextResponse.next())
+  }
 
   const isProtected = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
@@ -45,6 +67,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/api/:path*',
     '/dashboard/:path*',
     '/documents/:path*',
     '/profile/:path*',

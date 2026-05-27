@@ -43,6 +43,18 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="document/new"
+          options={{ title: 'New Document', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="document/[id]"
+          options={{ title: 'Document', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="document/edit/[id]"
+          options={{ title: 'Edit Document', headerBackTitle: 'Back' }}
+        />
       </Stack>
     </AuthProvider>
   )

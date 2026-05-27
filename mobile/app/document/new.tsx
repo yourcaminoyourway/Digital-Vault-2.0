@@ -12,7 +12,14 @@ import {
   Platform,
 } from 'react-native'
 import { router } from 'expo-router'
-import { createDocument, getCategories } from '../../services/api'
+import * as DocumentPicker from 'expo-document-picker'
+import {
+  createDocument,
+  getCategories,
+  uploadDocumentFile,
+} from '../../services/api'
+
+const MAX_FILE_BYTES = 3 * 1024 * 1024
 
 type Category = {
   id: string
@@ -29,6 +36,41 @@ export default function NewDocumentScreen() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
+  const [pickedFile, setPickedFile] = useState<{
+    uri: string
+    name: string
+    size: number
+    mimeType?: string | null
+  } | null>(null)
+  const [uploadMsg, setUploadMsg] = useState<string>('')
+
+  async function pickFile() {
+    setUploadMsg('')
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: '*/*',
+      })
+      if (result.canceled || !result.assets?.[0]) return
+      const asset = result.assets[0]
+      if (asset.size && asset.size > MAX_FILE_BYTES) {
+        setUploadMsg(
+          `File too large (${(asset.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`
+        )
+        return
+      }
+      setPickedFile({
+        uri: asset.uri,
+        name: asset.name,
+        size: asset.size ?? 0,
+        mimeType: asset.mimeType,
+      })
+    } catch (err) {
+      setUploadMsg(
+        err instanceof Error ? err.message : 'Could not open file picker'
+      )
+    }
+  }
 
   useEffect(() => {
     getCategories()
@@ -57,7 +99,24 @@ export default function NewDocumentScreen() {
         tags: tagList,
       })
 
-      router.replace(`/document/${data.data.id}`)
+      const docId = data.data.id
+
+      if (pickedFile) {
+        try {
+          await uploadDocumentFile(docId, pickedFile)
+        } catch (uploadErr) {
+          const msg =
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : 'File upload failed'
+          Alert.alert(
+            'File not attached',
+            `${msg}\n\nThe document was created without the file. You can attach it from the edit screen.`
+          )
+        }
+      }
+
+      router.replace(`/document/${docId}`)
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Failed to create document'
@@ -186,6 +245,38 @@ export default function NewDocumentScreen() {
               trackColor={{ false: '#e5e7eb', true: '#a5b4fc' }}
               thumbColor={isPublic ? '#6366f1' : '#f3f4f6'}
             />
+          </View>
+
+          {/* Attach file */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Attach File (optional)</Text>
+            {pickedFile ? (
+              <View style={styles.filePill}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {pickedFile.name}
+                  </Text>
+                  <Text style={styles.fileMeta}>
+                    {(pickedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setPickedFile(null)}>
+                  <Text style={styles.fileRemove}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.filePickerButton}
+                onPress={pickFile}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filePickerButtonText}>📎 Pick a file</Text>
+                <Text style={styles.hint}>Max 3 MB · stored in your account</Text>
+              </TouchableOpacity>
+            )}
+            {uploadMsg ? (
+              <Text style={styles.errorHint}>{uploadMsg}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -349,5 +440,50 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 15,
     fontWeight: '600',
+  },
+  filePickerButton: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  filePickerButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  filePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderRadius: 10,
+    padding: 12,
+    gap: 12,
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3730a3',
+  },
+  fileMeta: {
+    fontSize: 12,
+    color: '#6366f1',
+    marginTop: 2,
+  },
+  fileRemove: {
+    fontSize: 13,
+    color: '#dc2626',
+    fontWeight: '600',
+  },
+  errorHint: {
+    color: '#dc2626',
+    fontSize: 12,
+    marginTop: 4,
   },
 })

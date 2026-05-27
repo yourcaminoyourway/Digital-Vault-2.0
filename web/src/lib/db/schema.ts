@@ -8,7 +8,39 @@ import {
   integer,
   pgEnum,
   index,
+  customType,
 } from 'drizzle-orm/pg-core'
+
+// Custom BYTEA type for storing small file binaries directly in PG.
+// Used here for the demo file-storage feature (≤ 3 MB per file).
+//
+// The @neondatabase/serverless HTTP driver doesn't natively serialize a
+// Node Buffer into BYTEA — it ends up JSON-stringifying it. So we encode
+// to hex on the way in and decode on the way out.
+const bytea = customType<{ data: Buffer; driverData: string }>({
+  dataType() {
+    return 'bytea'
+  },
+  toDriver(value: Buffer): string {
+    return '\\x' + value.toString('hex')
+  },
+  fromDriver(value: unknown): Buffer {
+    if (Buffer.isBuffer(value)) return value
+    if (value instanceof Uint8Array) return Buffer.from(value)
+    if (typeof value === 'string') {
+      const hex = value.startsWith('\\x') ? value.slice(2) : value
+      return Buffer.from(hex, 'hex')
+    }
+    if (
+      value &&
+      typeof value === 'object' &&
+      Array.isArray((value as { data?: unknown }).data)
+    ) {
+      return Buffer.from((value as { data: number[] }).data)
+    }
+    return Buffer.alloc(0)
+  },
+})
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user'])
 
@@ -41,6 +73,8 @@ export const documents = pgTable('documents', {
   fileUrl: text('file_url'),
   fileKey: text('file_key'),
   fileSize: integer('file_size'),
+  fileName: varchar('file_name', { length: 255 }),
+  fileData: bytea('file_data'),
   mimeType: varchar('mime_type', { length: 100 }),
   tags: text('tags').array(),
   categoryId: uuid('category_id').references(() => categories.id, {

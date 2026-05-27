@@ -185,6 +185,34 @@ export async function deleteDocument(id: string) {
   return response.data
 }
 
+// File attachments
+export async function uploadDocumentFile(
+  id: string,
+  file: { uri: string; name: string; mimeType?: string | null }
+) {
+  const form = new FormData()
+  // React Native FormData accepts this RN-specific object shape
+  form.append('file', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType ?? 'application/octet-stream',
+    // RN typings are loose here
+  } as unknown as Blob)
+  const response = await apiClient.post(`/api/documents/${id}/file`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return response.data
+}
+
+export async function deleteDocumentFile(id: string) {
+  const response = await apiClient.delete(`/api/documents/${id}/file`)
+  return response.data
+}
+
+export function getDocumentFileUrl(id: string): string {
+  return `${API_BASE_URL}/api/documents/${id}/file`
+}
+
 // Categories
 export async function getCategories() {
   const response = await apiClient.get('/api/categories')

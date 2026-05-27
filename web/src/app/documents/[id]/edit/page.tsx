@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, AlertCircle } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Upload, Trash2, FileText, Check } from 'lucide-react'
 import Navbar from '@/components/navbar'
 
 type Document = {
@@ -13,6 +13,9 @@ type Document = {
   categoryId: string | null
   isPublic: boolean
   tags: string[] | null
+  fileName?: string | null
+  fileSize?: number | null
+  fileUrl?: string | null
 }
 
 type Category = {
@@ -40,6 +43,12 @@ export default function EditDocumentPage({
   const [loadError, setLoadError] = useState<
     null | 'notfound' | 'forbidden' | 'network'
   >(null)
+
+  // File management state (separate from metadata save)
+  const [newFile, setNewFile] = useState<File | null>(null)
+  const [fileMsg, setFileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [fileBusy, setFileBusy] = useState(false)
+  const MAX_FILE_BYTES = 3 * 1024 * 1024
 
   useEffect(() => {
     async function load() {
@@ -122,6 +131,82 @@ export default function EditDocumentPage({
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleFileUpload() {
+    if (!newFile) return
+    setFileMsg(null)
+
+    if (newFile.size > MAX_FILE_BYTES) {
+      setFileMsg({
+        type: 'error',
+        text: `File is too large (${(newFile.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`,
+      })
+      return
+    }
+
+    setFileBusy(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', newFile)
+      const res = await fetch(`/api/documents/${params.id}/file`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setFileMsg({
+          type: 'error',
+          text: data.error ?? 'Upload failed. Please try again.',
+        })
+      } else {
+        setDocument((prev) =>
+          prev
+            ? {
+                ...prev,
+                fileName: data.data?.fileName ?? newFile.name,
+                fileSize: data.data?.fileSize ?? newFile.size,
+                fileUrl: data.data?.fileUrl ?? `/api/documents/${params.id}/file`,
+              }
+            : prev
+        )
+        setNewFile(null)
+        setFileMsg({ type: 'success', text: 'File uploaded successfully.' })
+      }
+    } catch {
+      setFileMsg({ type: 'error', text: 'Network error. Please try again.' })
+    } finally {
+      setFileBusy(false)
+    }
+  }
+
+  async function handleFileRemove() {
+    if (!confirm('Remove the attached file? This cannot be undone.')) return
+    setFileMsg(null)
+    setFileBusy(true)
+    try {
+      const res = await fetch(`/api/documents/${params.id}/file`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setFileMsg({
+          type: 'error',
+          text: data.error ?? 'Could not remove file.',
+        })
+      } else {
+        setDocument((prev) =>
+          prev
+            ? { ...prev, fileName: null, fileSize: null, fileUrl: null }
+            : prev
+        )
+        setFileMsg({ type: 'success', text: 'File removed.' })
+      }
+    } catch {
+      setFileMsg({ type: 'error', text: 'Network error. Please try again.' })
+    } finally {
+      setFileBusy(false)
     }
   }
 
@@ -302,6 +387,111 @@ export default function EditDocumentPage({
               <p className="mt-1.5 text-xs text-gray-400">
                 Separate tags with commas
               </p>
+            </div>
+
+            {/* File attachment section (managed separately from metadata save) */}
+            <div className="pt-2 border-t border-gray-100">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Attached File
+              </label>
+
+              {fileMsg && (
+                <div
+                  className={`mb-3 flex items-center gap-2 p-3 rounded-lg text-sm ${
+                    fileMsg.type === 'success'
+                      ? 'bg-green-50 border border-green-200 text-green-700'
+                      : 'bg-red-50 border border-red-200 text-red-700'
+                  }`}
+                >
+                  {fileMsg.type === 'success' ? (
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>{fileMsg.text}</span>
+                </div>
+              )}
+
+              {document?.fileName ? (
+                <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                  <FileText className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-indigo-900 truncate">
+                      {document.fileName}
+                    </p>
+                    {document.fileSize != null && (
+                      <p className="text-xs text-indigo-600">
+                        {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    )}
+                  </div>
+                  <a
+                    href={`/api/documents/${params.id}/file`}
+                    className="text-xs px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50"
+                  >
+                    Download
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleFileRemove}
+                    disabled={fileBusy}
+                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                    title="Remove file"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : newFile ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <Upload className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-indigo-900 truncate">
+                        {newFile.name}
+                      </p>
+                      <p className="text-xs text-indigo-600">
+                        {(newFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewFile(null)}
+                      disabled={fileBusy}
+                      className="text-indigo-400 hover:text-indigo-600"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFileUpload}
+                    disabled={fileBusy}
+                    className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-60"
+                  >
+                    {fileBusy ? 'Uploading…' : 'Upload File'}
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
+                  <Upload className="w-7 h-7 text-gray-400" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-700">
+                      Attach a file
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Max 3 MB · stored in your account
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      setFileMsg(null)
+                      setNewFile(e.target.files?.[0] ?? null)
+                    }}
+                  />
+                </label>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">

@@ -12,10 +12,13 @@ import {
   Platform,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
+import * as DocumentPicker from 'expo-document-picker'
 import {
   getDocument,
   getCategories,
   updateDocument,
+  uploadDocumentFile,
+  deleteDocumentFile,
 } from '../../../services/api'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 
@@ -24,6 +27,8 @@ type Category = {
   name: string
   color: string
 }
+
+const MAX_FILE_BYTES = 3 * 1024 * 1024
 
 export default function EditDocumentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -38,6 +43,67 @@ export default function EditDocumentScreen() {
   const [saving, setSaving] = useState(false)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
   const [loadError, setLoadError] = useState<string>('')
+
+  // File state
+  const [currentFile, setCurrentFile] = useState<{
+    fileName: string | null
+    fileSize: number | null
+  }>({ fileName: null, fileSize: null })
+  const [fileBusy, setFileBusy] = useState(false)
+  const [fileMsg, setFileMsg] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
+
+  async function pickAndUpload() {
+    setFileMsg(null)
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: '*/*',
+      })
+      if (result.canceled || !result.assets?.[0]) return
+      const asset = result.assets[0]
+      if (asset.size && asset.size > MAX_FILE_BYTES) {
+        setFileMsg({
+          type: 'error',
+          text: `File too large (${(asset.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`,
+        })
+        return
+      }
+      setFileBusy(true)
+      const res = await uploadDocumentFile(id!, {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType,
+      })
+      setCurrentFile({
+        fileName: res.data?.fileName ?? asset.name,
+        fileSize: res.data?.fileSize ?? asset.size ?? null,
+      })
+      setFileMsg({ type: 'success', text: 'File uploaded successfully.' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      setFileMsg({ type: 'error', text: msg })
+    } finally {
+      setFileBusy(false)
+    }
+  }
+
+  async function removeFile() {
+    setFileMsg(null)
+    setFileBusy(true)
+    try {
+      await deleteDocumentFile(id!)
+      setCurrentFile({ fileName: null, fileSize: null })
+      setFileMsg({ type: 'success', text: 'File removed.' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not remove file'
+      setFileMsg({ type: 'error', text: msg })
+    } finally {
+      setFileBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -58,6 +124,10 @@ export default function EditDocumentScreen() {
         setIsPublic(!!doc.isPublic)
         setTags(Array.isArray(doc.tags) ? doc.tags.join(', ') : '')
         setCategories(catRes.data ?? [])
+        setCurrentFile({
+          fileName: doc.fileName ?? null,
+          fileSize: doc.fileSize ?? null,
+        })
       } catch (err: unknown) {
         const message =
           err instanceof Error && err.message
@@ -228,6 +298,73 @@ export default function EditDocumentScreen() {
               thumbColor={isPublic ? '#6366f1' : '#f3f4f6'}
             />
           </View>
+
+          {/* File attachment */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Attached File</Text>
+            {fileMsg ? (
+              <View
+                style={[
+                  styles.msgPill,
+                  fileMsg.type === 'success'
+                    ? styles.msgPillSuccess
+                    : styles.msgPillError,
+                ]}
+              >
+                <Text
+                  style={
+                    fileMsg.type === 'success'
+                      ? styles.msgPillSuccessText
+                      : styles.msgPillErrorText
+                  }
+                >
+                  {fileMsg.text}
+                </Text>
+              </View>
+            ) : null}
+            {currentFile.fileName ? (
+              <View style={styles.fileRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fileRowName} numberOfLines={1}>
+                    📎 {currentFile.fileName}
+                  </Text>
+                  {currentFile.fileSize != null && (
+                    <Text style={styles.fileRowMeta}>
+                      {(currentFile.fileSize / 1024 / 1024).toFixed(2)} MB
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={pickAndUpload}
+                  disabled={fileBusy}
+                  style={styles.fileBtnSecondary}
+                >
+                  <Text style={styles.fileBtnSecondaryText}>
+                    {fileBusy ? '…' : 'Replace'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={removeFile}
+                  disabled={fileBusy}
+                  style={styles.fileBtnDanger}
+                >
+                  <Text style={styles.fileBtnDangerText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.filePickerBtn}
+                onPress={pickAndUpload}
+                disabled={fileBusy}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filePickerBtnText}>
+                  {fileBusy ? 'Uploading…' : '📎 Attach a file'}
+                </Text>
+                <Text style={styles.hint}>Max 3 MB · stored in your account</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -357,4 +494,56 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backLink: { color: '#6366f1', fontWeight: '600' },
+  filePickerBtn: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  filePickerBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  fileRowName: { fontSize: 14, fontWeight: '600', color: '#3730a3' },
+  fileRowMeta: { fontSize: 12, color: '#6366f1', marginTop: 2 },
+  fileBtnSecondary: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+  },
+  fileBtnSecondaryText: { fontSize: 12, fontWeight: '700', color: '#4338ca' },
+  fileBtnDanger: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+  },
+  fileBtnDangerText: { fontSize: 12, fontWeight: '700', color: '#b91c1c' },
+  msgPill: { borderRadius: 8, padding: 10, marginBottom: 8 },
+  msgPillSuccess: {
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  msgPillSuccessText: { color: '#166534', fontSize: 13, fontWeight: '600' },
+  msgPillError: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  msgPillErrorText: { color: '#991b1b', fontSize: 13, fontWeight: '600' },
 })

@@ -38,6 +38,7 @@ export async function getDocuments(
         fileUrl: documents.fileUrl,
         fileKey: documents.fileKey,
         fileSize: documents.fileSize,
+        fileName: documents.fileName,
         mimeType: documents.mimeType,
         tags: documents.tags,
         categoryId: documents.categoryId,

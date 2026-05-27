@@ -6,9 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { getDocument, deleteDocument } from '../../services/api'
+import {
+  getDocument,
+  deleteDocument,
+  getDocumentFileUrl,
+} from '../../services/api'
+import * as SecureStore from 'expo-secure-store'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { useAuth } from '../../context/AuthContext'
 
@@ -25,6 +32,7 @@ type Document = {
   tags: string[] | null
   userId: string
   fileUrl: string | null
+  fileName: string | null
   fileSize: number | null
   mimeType: string | null
 }
@@ -33,6 +41,74 @@ export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { user } = useAuth()
   const [document, setDocument] = useState<Document | null>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    if (!document?.fileUrl || !id) return
+    setDownloading(true)
+    try {
+      const fileUrl = getDocumentFileUrl(id)
+      const token =
+        Platform.OS === 'web'
+          ? localStorage.getItem('auth-token')
+          : await SecureStore.getItemAsync('auth-token')
+
+      if (Platform.OS === 'web') {
+        // Fetch with auth, blob → trigger browser download
+        const res = await fetch(fileUrl, {
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        })
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string
+          }
+          throw new Error(data.error ?? 'Download failed')
+        }
+        const blob = await res.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        // window/document only exist on web platform
+        const w = globalThis as unknown as {
+          document: {
+            createElement: (t: string) => {
+              href: string
+              download: string
+              click: () => void
+            }
+          }
+        }
+        const a = w.document.createElement('a')
+        a.href = blobUrl
+        a.download = document.fileName ?? 'document'
+        a.click()
+        URL.revokeObjectURL(blobUrl)
+      } else {
+        // Native: download to cache then share/open
+        const FileSystem = await import('expo-file-system')
+        const cacheDir =
+          (FileSystem as { documentDirectory?: string }).documentDirectory ??
+          (FileSystem as { cacheDirectory?: string }).cacheDirectory
+        const targetPath =
+          (cacheDir ?? '') + (document.fileName ?? `document-${id}`)
+        const result = await (
+          FileSystem as unknown as {
+            downloadAsync: (
+              url: string,
+              target: string,
+              opts: { headers: Record<string, string> }
+            ) => Promise<{ uri: string }>
+          }
+        ).downloadAsync(fileUrl, targetPath, {
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        })
+        Alert.alert('Downloaded', `Saved to: ${result.uri}`)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Download failed'
+      Alert.alert('Error', msg)
+    } finally {
+      setDownloading(false)
+    }
+  }
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -152,6 +228,32 @@ export default function DocumentDetailScreen() {
           </>
         )}
       </View>
+
+      {/* Attached file */}
+      {document.fileUrl && (
+        <View style={styles.fileCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fileCardName} numberOfLines={1}>
+              📎 {document.fileName ?? 'Attached file'}
+            </Text>
+            {document.fileSize != null && (
+              <Text style={styles.fileCardMeta}>
+                {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.downloadButton}
+            onPress={handleDownload}
+            disabled={downloading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.downloadButtonText}>
+              {downloading ? '...' : 'Download'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Tags */}
       {document.tags && document.tags.length > 0 && (
@@ -357,5 +459,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#dc2626',
+  },
+  fileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  fileCardName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3730a3',
+  },
+  fileCardMeta: {
+    fontSize: 12,
+    color: '#6366f1',
+    marginTop: 2,
+  },
+  downloadButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  downloadButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 })

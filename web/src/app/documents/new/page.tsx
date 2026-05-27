@@ -32,6 +32,8 @@ export default function NewDocumentPage() {
       .catch(() => {})
   }, [])
 
+  const MAX_FILE_BYTES = 3 * 1024 * 1024
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -41,44 +43,21 @@ export default function NewDocumentPage() {
       return
     }
 
+    // Pre-validate file size client-side for instant feedback
+    if (file && file.size > MAX_FILE_BYTES) {
+      setError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`)
+      return
+    }
+
     setSubmitting(true)
 
     try {
-      let fileData: {
-        fileUrl?: string
-        fileKey?: string
-        fileSize?: number
-        mimeType?: string
-      } = {}
-
-      // Upload file if selected
-      if (file) {
-        setUploading(true)
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-
-        const uploadData = await uploadRes.json()
-
-        if (!uploadRes.ok) {
-          if (uploadRes.status === 503) {
-            throw new Error('File storage is not configured yet. Remove the file and save the document without an attachment, or contact the administrator.')
-          }
-          throw new Error(uploadData.error ?? 'File upload failed. Please try again.')
-        }
-        fileData = uploadData.data
-        setUploading(false)
-      }
-
       const tagList = tags
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean)
 
+      // 1) Create the document (metadata only)
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +67,6 @@ export default function NewDocumentPage() {
           categoryId: categoryId || undefined,
           isPublic,
           tags: tagList,
-          ...fileData,
         }),
       })
 
@@ -98,12 +76,44 @@ export default function NewDocumentPage() {
         throw new Error(data.error ?? 'Failed to create document')
       }
 
+      const docId = data.data.id
+
+      // 2) If a file was attached, upload it to the new document
+      if (file) {
+        setUploading(true)
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const uploadRes = await fetch(`/api/documents/${docId}/file`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const uploadData = await uploadRes.json().catch(() => ({}))
+
+        if (!uploadRes.ok) {
+          // Document was created but file failed — let user know but
+          // still navigate to the detail page where they can retry.
+          setError(
+            (uploadData.error ?? 'File upload failed.') +
+              ' The document was created without the file — you can attach one from the edit screen.'
+          )
+          setUploading(false)
+          setSubmitting(false)
+          setTimeout(() => {
+            router.refresh()
+            router.push(`/documents/${docId}`)
+          }, 2500)
+          return
+        }
+        setUploading(false)
+      }
+
       router.refresh()
-      router.push(`/documents/${data.data.id}`)
+      router.push(`/documents/${docId}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
-      const isJsInternalError = msg.includes('body stream') || msg.includes('Failed to execute')
-      setError(isJsInternalError ? 'Could not connect to server. Please try again.' : msg)
+      setError(msg)
       setUploading(false)
     } finally {
       setSubmitting(false)
@@ -252,9 +262,11 @@ export default function NewDocumentPage() {
                   <Upload className="w-8 h-8 text-gray-400" />
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-700">
-                      Click to upload or drag and drop
+                      Click to upload
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">Max 50MB</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Max 3 MB · stored in your account
+                    </p>
                   </div>
                   <input
                     type="file"

@@ -1,287 +1,275 @@
 # Digital Vault 2.0
 
-A secure, multi-platform document management system for individuals and teams. Store, organize, and share documents with role-based access control, full-text search, and cloud file storage.
+A secure, multi-platform document management system for individuals and teams. Store, organize, edit and share documents with role-based access control, full-text search, categories, tags, and file attachments — all backed by a single PostgreSQL database and consumed by both a Next.js web app and an Expo mobile app.
+
+Built as a SoftUni "Full Stack Apps with AI" capstone project (May 2026).
 
 ## 🚀 Live Demo
 
 | | URL |
 |---|---|
 | **Web app** | https://digitalvault2.netlify.app |
-| **Mobile (web export)** | https://digitalvault2-mobile.netlify.app |
+| **Mobile (Expo web export)** | https://digitalvault2-mobile.netlify.app |
 | **Source** | https://github.com/yourcaminoyourway/Digital-Vault-2.0 |
 
-### Demo credentials
+> Demo login credentials are provided separately in the submission form. You can also register a fresh account directly at the live URL — new accounts are automatically given 4 default categories (Personal, Work, Finance, Other).
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@digitalvault.com` | `Admin123!` |
-| User | `user@digitalvault.com` | `User123!` |
+## Highlights
 
-Or register your own account at the live URL.
+- **Real file uploads** — store, replace, download, and delete document files end-to-end. Caps: 3 MB per file, 10 files per user (so a 500 MB free Neon DB stays comfortably under quota).
+- **10 000+ seeded documents** so paging, sorting and search are tested under realistic load.
+- **Cross-origin Bearer-token auth** so the same Next.js API serves both the web app (cookie) and the mobile app (Authorization header).
+- **Admin panel** with user search, role management, and dashboard stats.
+- **Default-aware** — new users get a starter set of categories on registration; existing users with missing defaults are backfilled on next request.
 
 ## Architecture
 
 ```
+┌──────────────────────────────────────────────────────────────┐
+│                          CLIENTS                             │
+│                                                              │
+│   Browser (Next.js Web)         Mobile (Expo React Native)   │
+│   • Server Components            • Tabs + stack routing      │
+│   • Server Actions               • REST via axios + Bearer   │
+│   • Cookies (httpOnly)           • SecureStore for token     │
+└────────┬─────────────────────────────────────┬───────────────┘
+         │                                     │
+         ▼                                     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                        CLIENTS                              │
+│                  Next.js App (web/)                         │
 │                                                             │
-│   Browser (Next.js Web)      Mobile (Expo React Native)     │
-│        │                              │                     │
-└────────┼──────────────────────────────┼─────────────────────┘
-         │                              │
-         ▼                              ▼
-┌────────────────────────────────────────────────────────────┐
-│                   Next.js Web App (web/)                   │
-│                                                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │  App Router  │  │  API Routes  │  │ Server Actions  │  │
-│  │   (Pages)    │  │ /api/**      │  │  (Form Submit)  │  │
-│  └──────────────┘  └──────┬───────┘  └────────┬────────┘  │
-│                           │                    │           │
-│  ┌────────────────────────▼────────────────────▼────────┐  │
-│  │                  Services Layer                       │  │
-│  │         documentService.ts / userService.ts           │  │
-│  └──────────────────────┬────────────────────────────────┘  │
-│                         │                                  │
-│  ┌──────────────────────▼────────────────────────────────┐  │
-│  │              Drizzle ORM + Schema                      │  │
-│  └──────────────────────┬────────────────────────────────┘  │
-└─────────────────────────┼──────────────────────────────────┘
-                          │
-                          ▼
-              ┌───────────────────────┐
-              │   Neon PostgreSQL     │
-              │   (Serverless DB)     │
-              └───────────────────────┘
-
-File uploads → Cloudflare R2 (S3-compatible object storage)
-Auth         → JWT tokens (jose) stored in httpOnly cookies / SecureStore
+│  App Router pages  │  REST API routes  │  Server Actions    │
+│  (10+ screens)     │  /api/**          │  for form submits  │
+│         │                 │                   │             │
+│         ▼                 ▼                   ▼             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Services layer                          │    │
+│  │  documentService · userService · auth · r2 · format  │    │
+│  └────────────────────────┬─────────────────────────────┘    │
+│                           │                                 │
+│                  ┌────────▼─────────┐                       │
+│                  │  Drizzle ORM     │                       │
+│                  └────────┬─────────┘                       │
+└───────────────────────────┼─────────────────────────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │   Neon serverless PG      │
+              │  (5 tables · 10k seed)    │
+              │  Files stored as BYTEA    │
+              └───────────────────────────┘
 ```
+
+### Communication
+
+- **Web ↔ API**: Server Components fetch via direct service calls; client components use `fetch('/api/...')`. Auth via `auth-token` httpOnly cookie.
+- **Mobile ↔ API**: axios → `https://digitalvault2.netlify.app/api/...` with `Authorization: Bearer <token>` header. Token stored in `expo-secure-store` (native) or `localStorage` (web export).
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Web Framework | Next.js 14 (App Router) | SSR/SSG web application |
-| Language | TypeScript 5 | Type safety across full stack |
-| Styling | Tailwind CSS 3 | Utility-first CSS |
-| ORM | Drizzle ORM | Type-safe database queries |
-| Database | Neon PostgreSQL | Serverless PostgreSQL |
-| Auth | JWT via jose | Stateless authentication |
-| Passwords | bcryptjs | Secure password hashing |
-| File Storage | Cloudflare R2 | S3-compatible object storage |
-| Validation | Zod | Runtime type validation |
-| Mobile | Expo SDK 51 | Cross-platform React Native |
-| Mobile Routing | Expo Router | File-based mobile navigation |
-| Mobile Auth | expo-secure-store | Secure token storage |
-| Icons | lucide-react | Web icon library |
+| Layer | Technology |
+|---|---|
+| Web framework | Next.js 14 (App Router) |
+| Mobile framework | Expo SDK 54 + Expo Router |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 3 (web), React Native StyleSheet (mobile) |
+| Database | Neon serverless PostgreSQL |
+| ORM | Drizzle ORM + Drizzle Kit migrations |
+| Auth | JWT via `jose` (HS256, 7-day expiry) |
+| Passwords | bcryptjs (12 rounds) |
+| File storage | PostgreSQL `BYTEA` column (with R2 code stub for swap-out) |
+| Validation | Zod schemas at every API boundary |
+| HTTP client | axios (mobile), native fetch (web) |
+| Hosting | Netlify (web + mobile-web), Neon (DB) |
 
 ## Database Schema
 
-### users
-| Column | Type | Description |
-|---|---|---|
-| id | uuid PK | Primary key |
-| email | varchar(255) UNIQUE | User email |
-| password_hash | varchar(255) | bcrypt hash |
-| full_name | varchar(255) | Display name |
-| role | enum(admin,user) | Access role |
-| avatar_url | text | Profile picture URL |
-| is_active | boolean | Account status |
-| created_at | timestamp | Creation time |
-| updated_at | timestamp | Last update time |
+5 tables with relationships and indexes.
 
-### documents
-| Column | Type | Description |
-|---|---|---|
-| id | uuid PK | Primary key |
-| title | varchar(255) | Document title |
-| description | text | Optional description |
-| file_url | text | Public file URL (R2) |
-| file_key | text | R2 object key |
-| file_size | integer | File size in bytes |
-| mime_type | varchar(100) | MIME type |
-| tags | text[] | Array of tags |
-| category_id | uuid FK | Category reference |
-| user_id | uuid FK | Owner reference |
-| is_public | boolean | Public visibility |
-| view_count | integer | Number of views |
-| created_at | timestamp | Creation time |
-| updated_at | timestamp | Last update time |
+```
+users 1───* categories
+  │  1───* documents 1───* document_shares *───1 users
+  │                                              ▲
+  └────────────────────────────────────────* audit_logs (nullable user)
+```
 
-### categories
-| Column | Type | Description |
-|---|---|---|
-| id | uuid PK | Primary key |
-| name | varchar(100) | Category name |
-| color | varchar(7) | Hex color code |
-| user_id | uuid FK | Owner reference |
-| created_at | timestamp | Creation time |
+### `users`
+PK `id` · `email` UNIQUE · `password_hash` (bcrypt) · `full_name` · `role` (admin/user) · `avatar_url` · `is_active` · timestamps
 
-### document_shares
-| Column | Type | Description |
-|---|---|---|
-| id | uuid PK | Primary key |
-| document_id | uuid FK | Document reference |
-| shared_with_user_id | uuid FK | Recipient user |
-| can_edit | boolean | Edit permission |
-| created_at | timestamp | Share time |
+### `categories`
+PK `id` · `name` · `color` (hex) · FK `user_id` (CASCADE delete) · `created_at`
 
-### audit_logs
-| Column | Type | Description |
-|---|---|---|
-| id | uuid PK | Primary key |
-| user_id | uuid FK | Actor (nullable) |
-| action | varchar(100) | Action performed |
-| resource_type | varchar(50) | Resource type |
-| resource_id | uuid | Resource ID |
-| details | text | JSON details |
-| created_at | timestamp | Event time |
+### `documents`
+PK `id` · `title` · `description` · `tags[]` · FK `category_id` (SET NULL) · FK `user_id` (CASCADE) · `is_public` · `view_count` · timestamps
+**File columns:** `file_name`, `file_size`, `mime_type`, `file_url`, `file_key`, `file_data` (BYTEA — only fetched on download)
+**Indexes:** `user_id`, `category_id`, `created_at`, `is_public` — keeps the 10 000-row list page fast.
+
+### `document_shares`
+PK `id` · FK `document_id` (CASCADE) · FK `shared_with_user_id` (CASCADE) · `can_edit` · `created_at`
+
+### `audit_logs`
+PK `id` · FK `user_id` (SET NULL) · `action` · `resource_type` · `resource_id` · `details` (JSON) · `created_at`
+**Indexes:** `user_id`, `created_at`
+
+All schema changes go through Drizzle migrations in `web/drizzle/migrations/`.
 
 ## Repository Structure
 
 ```
 digital-vault-2.0/
-├── web/                          # Next.js 14 web application
+├── web/                              # Next.js 14 app
 │   ├── src/
-│   │   ├── app/                  # App Router pages and API routes
-│   │   │   ├── (auth)/          # Auth group (login, register)
-│   │   │   ├── api/             # REST API endpoints
-│   │   │   │   ├── auth/        # login, register, logout, me
-│   │   │   │   ├── documents/   # CRUD + upload
-│   │   │   │   ├── categories/  # Category management
-│   │   │   │   ├── users/       # Admin user management
-│   │   │   │   └── upload/      # R2 file upload
-│   │   │   ├── actions/         # Server Actions
-│   │   │   ├── dashboard/       # Dashboard page
-│   │   │   ├── documents/       # Document pages
-│   │   │   ├── profile/         # User profile
-│   │   │   └── admin/           # Admin panel
-│   │   ├── components/          # Reusable React components
+│   │   ├── app/
+│   │   │   ├── (auth)/              # login, register
+│   │   │   ├── api/                 # REST endpoints (see below)
+│   │   │   ├── actions/             # Server Actions
+│   │   │   ├── admin/               # Admin panel
+│   │   │   ├── dashboard/           # Authenticated home
+│   │   │   ├── documents/           # List · new · [id] · [id]/edit
+│   │   │   ├── profile/             # Edit name + change password
+│   │   │   └── page.tsx             # Public landing
+│   │   ├── components/              # navbar, document-card, modals…
 │   │   ├── lib/
-│   │   │   ├── db/              # Drizzle schema, client, seed
-│   │   │   ├── auth.ts          # JWT utilities
-│   │   │   └── r2.ts            # Cloudflare R2 service
-│   │   ├── services/            # Business logic layer
-│   │   └── types/               # TypeScript types
-│   ├── drizzle/
-│   │   └── migrations/          # SQL migration files
-│   └── drizzle.config.ts        # Drizzle Kit config
-│
-└── mobile/                      # Expo React Native app
-    ├── app/                     # Expo Router pages
-    │   ├── (auth)/              # Login, register screens
-    │   ├── (tabs)/              # Tab navigator screens
-    │   └── document/            # Document detail/create
-    ├── components/              # React Native components
-    ├── context/                 # AuthContext
-    ├── services/                # API service (axios)
-    └── constants/               # API URLs
+│   │   │   ├── db/                  # schema.ts, seed.ts, client
+│   │   │   ├── auth.ts              # JWT + session helpers
+│   │   │   ├── r2.ts                # R2 stub (future-proof)
+│   │   │   └── format.ts            # formatFileSize helper
+│   │   ├── services/                # documentService, userService
+│   │   ├── middleware.ts            # route protection + CORS
+│   │   └── types/
+│   ├── drizzle/migrations/          # SQL migration files (committed)
+│   └── netlify.toml                 # (legacy; superseded by root)
+├── mobile/                           # Expo React Native app
+│   ├── app/
+│   │   ├── (auth)/login.tsx · register.tsx
+│   │   ├── (tabs)/index.tsx · documents.tsx · profile.tsx
+│   │   └── document/new.tsx · [id].tsx · edit/[id].tsx
+│   ├── components/                  # DocumentCard, EmptyState, etc.
+│   ├── context/AuthContext.tsx
+│   ├── services/api.ts              # axios + interceptors
+│   ├── lib/format.ts                # shared size formatter
+│   └── constants/api.ts
+├── netlify.toml                      # base="web" config used for prod
+├── AGENTS.md                         # AI agent / contributor guide
+└── README.md
 ```
 
-## Local Development Setup
+## API Endpoints
+
+Auth + sessions:
+
+| Method | Path | Description | Access |
+|---|---|---|---|
+| POST | `/api/auth/register` | Create account, auto-seed default categories | Public |
+| POST | `/api/auth/login` | Returns user + JWT in body **and** cookie | Public |
+| POST | `/api/auth/logout` | Clear cookie | Public |
+| GET | `/api/auth/me` | Current user | Required |
+| POST | `/api/auth/change-password` | bcrypt verify + replace | Required |
+
+Documents:
+
+| Method | Path | Description | Access |
+|---|---|---|---|
+| GET | `/api/documents` | List with paging, search, category, sort | Required |
+| POST | `/api/documents` | Create | Required |
+| GET | `/api/documents/:id` | Read (own or public) | Required |
+| PATCH | `/api/documents/:id` | Update metadata | Owner |
+| DELETE | `/api/documents/:id` | Delete | Owner/Admin |
+| POST | `/api/documents/:id/file` | Upload / replace file (3 MB, 10 files/user) | Owner |
+| GET | `/api/documents/:id/file` | Stream file with proper headers | Owner/Public |
+| DELETE | `/api/documents/:id/file` | Detach file, keep document | Owner |
+
+Other:
+
+| Method | Path | Description | Access |
+|---|---|---|---|
+| GET | `/api/categories` | List own categories (backfills defaults) | Required |
+| POST | `/api/categories` | Create category | Required |
+| GET | `/api/users` | Search users + counts | Admin |
+| PATCH | `/api/users` | Change role / active state | Admin |
+| PATCH | `/api/users/me` | Update own profile (name) | Required |
+
+All endpoints return a consistent `{ data?, error?, message? }` shape. CORS headers + OPTIONS preflight are handled in `middleware.ts` so the mobile-web build can call the API cross-origin.
+
+## Web Screens (10+)
+
+`/` landing · `/login` · `/register` · `/dashboard` · `/documents` (list + filters + paging) · `/documents/new` (create + file) · `/documents/[id]` (detail + download) · `/documents/[id]/edit` (metadata + file replace/remove) · `/profile` (name + password) · `/admin` (user search + roles)
+
+## Mobile Screens (7+)
+
+`(auth)/login` · `(auth)/register` · `(tabs)/index` (home + recent docs) · `(tabs)/documents` (search + paged list + pull-to-refresh) · `(tabs)/profile` · `document/new` · `document/[id]` (with download) · `document/edit/[id]`
+
+## Local Development
 
 ### Prerequisites
 - Node.js 20+
 - npm 10+
-- A Neon PostgreSQL database (free tier at neon.tech)
-- (Optional) Cloudflare R2 bucket for file uploads
+- A free Neon PostgreSQL database (https://neon.tech)
 
-### 1. Clone and Install
-
+### 1. Clone and install
 ```bash
-git clone <your-repo-url>
-cd digital-vault-2.0
+git clone https://github.com/yourcaminoyourway/Digital-Vault-2.0.git
+cd Digital-Vault-2.0
 cd web && npm install
-cd ../mobile && npm install
+cd ../mobile && npm install --legacy-peer-deps
 ```
 
-### 2. Configure Environment
-
+### 2. Configure environment
 ```bash
 cp .env.example web/.env.local
-# Edit web/.env.local and fill in:
-# DATABASE_URL — your Neon connection string
-# JWT_SECRET   — a random 32+ character string
+# Then edit web/.env.local and set:
+#   DATABASE_URL=<your Neon connection string>
+#   JWT_SECRET=<any random 32+ char string>
 ```
 
-### 3. Run Database Migrations
-
+### 3. Push schema + seed
 ```bash
 cd web
-npm run db:migrate
+export $(grep DATABASE_URL .env.local | xargs)
+npx drizzle-kit push       # apply schema
+npm run db:seed            # creates 10 000 documents + 2 demo users
 ```
 
-### 4. Seed the Database (Optional — creates 10,000 sample documents)
-
+### 4. Start the web app
 ```bash
 cd web
-npm run db:seed
+npx next dev -H 0.0.0.0    # http://localhost:3000
 ```
 
-### 5. Start the Web App
-
-```bash
-cd web
-npm run dev
-# Open http://localhost:3000
-```
-
-### 6. Start the Mobile App (Optional)
-
+### 5. Start the mobile app
 ```bash
 cd mobile
-npm run start
-# Scan QR code with Expo Go app
+npx expo start --clear     # scan QR with Expo Go (SDK 54)
 ```
+
+For LAN access from your phone, edit `mobile/constants/api.ts` and replace `digitalvault2.netlify.app` with `http://<your-mac-IP>:3000`.
 
 ## Deployment
 
-### Web App (Netlify)
+Both apps deploy to Netlify, both talk to the same Neon database.
 
-1. Connect your GitHub repo to Netlify
-2. Set build command: `cd web && npm install && npm run build`
-3. Set publish directory: `web/.next`
-4. Add the `@netlify/plugin-nextjs` plugin
-5. Set environment variables in Netlify dashboard:
-   - `DATABASE_URL`
-   - `JWT_SECRET`
-   - `NEXT_PUBLIC_APP_URL` (your Netlify URL)
-   - R2 variables (if using file uploads)
+### Web app
+The root `netlify.toml` sets `base="web"`, `command="npm run build"`, `publish=".next"`, and includes the `@netlify/plugin-nextjs` plugin and CORS headers for `/api/*`. Required env vars in Netlify:
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NEXT_PUBLIC_APP_URL` (your Netlify URL, after first deploy)
 
-### Mobile (Expo Web Export to Netlify)
-
+### Mobile (Expo web export)
 ```bash
 cd mobile
-npm run web
-# Or for static export:
 npx expo export --platform web
-# Deploy the dist/ folder to Netlify
+# A dist/ folder is produced. Drop it onto a Netlify "deploy manually" site.
+# dist/_redirects is included so client-side routing works.
 ```
 
-## Sample Credentials
+The mobile web build hits the live web API (URL hard-coded in `mobile/constants/api.ts`).
 
-After running `npm run db:seed`:
+## Demo / submission notes
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@digitalvault.com | Admin123! |
-| User | user@digitalvault.com | User123! |
+- **5 tables** in DB (users, categories, documents, document_shares, audit_logs)
+- **10 000+ documents** seeded for scalability testing
+- **15+ commits** across multiple days — see `git log`
+- **AGENTS.md** describes architectural conventions for AI dev tools
+- **No external secrets in repo** — all secrets live in Netlify / `.env.local`
 
-## API Endpoints
-
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| POST | /api/auth/register | Create account | Public |
-| POST | /api/auth/login | Login | Public |
-| POST | /api/auth/logout | Logout | Any |
-| GET | /api/auth/me | Current user | Required |
-| GET | /api/documents | List documents | Required |
-| POST | /api/documents | Create document | Required |
-| GET | /api/documents/:id | Get document | Required |
-| PATCH | /api/documents/:id | Update document | Owner |
-| DELETE | /api/documents/:id | Delete document | Owner/Admin |
-| GET | /api/categories | List categories | Required |
-| POST | /api/categories | Create category | Required |
-| POST | /api/upload | Upload file to R2 | Required |
-| GET | /api/users | List users | Admin |
+Built end-to-end with AI-assisted development (Claude Code).

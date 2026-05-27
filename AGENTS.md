@@ -23,8 +23,8 @@ digital-vault-2.0/
 | ORM | Drizzle ORM |
 | Database | Neon PostgreSQL (serverless) |
 | Auth | JWT via jose library, httpOnly cookies |
-| File Storage | Cloudflare R2 (S3-compatible) |
-| Mobile | Expo SDK 51 + Expo Router |
+| File Storage | PostgreSQL BYTEA column (demo); R2 stub kept for future migration |
+| Mobile | Expo SDK 54 + Expo Router |
 | Validation | Zod |
 | Password Hashing | bcryptjs |
 
@@ -56,12 +56,15 @@ digital-vault-2.0/
 - The mobile app stores the token in `expo-secure-store` under the key `auth-token`
 
 ## File Uploads
-- All file uploads go through Cloudflare R2
-- The upload service is at `web/src/lib/r2.ts`
-- Files are stored with a key format: `documents/{userId}/{timestamp}-{filename}`
-- The upload API route is `POST /api/upload`
-- Always store both `fileUrl` (public URL) and `fileKey` (R2 object key) in the documents table
-- Delete the R2 object when a document is deleted
+- Files are stored as `BYTEA` directly in the `documents.file_data` column for the demo. The custom Drizzle type in `web/src/lib/db/schema.ts` handles hex serialization so values round-trip cleanly through the neon-http driver.
+- Hard limits: **3 MB per file**, **10 files per user**, enforced server-side in `POST /api/documents/:id/file`.
+- File-related endpoints all live under `/api/documents/:id/file`:
+  - `POST` — upload or replace the file (multipart)
+  - `GET` — stream the bytes with correct `Content-Type` + `Content-Disposition`
+  - `DELETE` — detach the file but keep the document row
+- List and detail queries explicitly project columns to **exclude `file_data`** so they don't load megabytes per row. Only the single file-download endpoint reads `file_data`.
+- The mobile client picks files with `expo-document-picker`, uploads via axios FormData, and downloads via `expo-file-system.downloadAsync` (or a blob trick on web export).
+- `web/src/lib/r2.ts` is a code stub kept for the day we outgrow BYTEA — wiring R2 back in only requires changing the upload + download endpoints; the DB columns `file_url` / `file_key` are reserved for that path.
 
 ## Mobile App
 - The Expo app connects to the Next.js API — set `EXPO_PUBLIC_API_URL` in `mobile/.env`

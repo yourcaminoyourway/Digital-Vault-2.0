@@ -18,6 +18,7 @@ import {
   getCategories,
   uploadDocumentFile,
 } from '../../services/api'
+import { formatFileSize } from '../../lib/format'
 
 const MAX_FILE_BYTES = 3 * 1024 * 1024
 
@@ -55,7 +56,7 @@ export default function NewDocumentScreen() {
       const asset = result.assets[0]
       if (asset.size && asset.size > MAX_FILE_BYTES) {
         setUploadMsg(
-          `File too large (${(asset.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`
+          `File too large (${formatFileSize(asset.size)}). Max 3 MB.`
         )
         return
       }
@@ -257,7 +258,7 @@ export default function NewDocumentScreen() {
                     {pickedFile.name}
                   </Text>
                   <Text style={styles.fileMeta}>
-                    {(pickedFile.size / 1024 / 1024).toFixed(2)} MB
+                    {formatFileSize(pickedFile.size)}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setPickedFile(null)}>

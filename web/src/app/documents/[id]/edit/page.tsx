@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, AlertCircle, Upload, Trash2, FileText, Check } from 'lucide-react'
 import Navbar from '@/components/navbar'
+import { formatFileSize } from '@/lib/format'
 
 type Document = {
   id: string
@@ -141,7 +142,7 @@ export default function EditDocumentPage({
     if (newFile.size > MAX_FILE_BYTES) {
       setFileMsg({
         type: 'error',
-        text: `File is too large (${(newFile.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`,
+        text: `File is too large (${formatFileSize(newFile.size)}). Max 3 MB.`,
       })
       return
     }
@@ -421,7 +422,7 @@ export default function EditDocumentPage({
                     </p>
                     {document.fileSize != null && (
                       <p className="text-xs text-indigo-600">
-                        {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+                        {formatFileSize(document.fileSize)}
                       </p>
                     )}
                   </div>
@@ -450,7 +451,7 @@ export default function EditDocumentPage({
                         {newFile.name}
                       </p>
                       <p className="text-xs text-indigo-600">
-                        {(newFile.size / 1024 / 1024).toFixed(2)} MB
+                        {formatFileSize(newFile.size)}
                       </p>
                     </div>
                     <button

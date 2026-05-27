@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Upload, AlertCircle, X } from 'lucide-react'
 import Navbar from '@/components/navbar'
+import { formatFileSize } from '@/lib/format'
 
 type Category = {
   id: string
@@ -45,7 +46,7 @@ export default function NewDocumentPage() {
 
     // Pre-validate file size client-side for instant feedback
     if (file && file.size > MAX_FILE_BYTES) {
-      setError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`)
+      setError(`File is too large (${formatFileSize(file.size)}). Max 3 MB.`)
       return
     }
 
@@ -246,7 +247,7 @@ export default function NewDocumentPage() {
                       {file.name}
                     </p>
                     <p className="text-xs text-indigo-600">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                      {formatFileSize(file.size)}
                     </p>
                   </div>
                   <button

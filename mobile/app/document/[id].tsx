@@ -18,6 +18,7 @@ import {
 import * as SecureStore from 'expo-secure-store'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { useAuth } from '../../context/AuthContext'
+import { formatFileSize } from '../../lib/format'
 
 type Document = {
   id: string
@@ -222,7 +223,7 @@ export default function DocumentDetailScreen() {
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>File Size</Text>
               <Text style={styles.metaValue}>
-                {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+                {formatFileSize(document.fileSize)}
               </Text>
             </View>
           </>
@@ -238,7 +239,7 @@ export default function DocumentDetailScreen() {
             </Text>
             {document.fileSize != null && (
               <Text style={styles.fileCardMeta}>
-                {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+                {formatFileSize(document.fileSize)}
               </Text>
             )}
           </View>

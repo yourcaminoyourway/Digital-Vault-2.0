@@ -21,6 +21,7 @@ import {
   deleteDocumentFile,
 } from '../../../services/api'
 import LoadingSpinner from '../../../components/LoadingSpinner'
+import { formatFileSize } from '../../../lib/format'
 
 type Category = {
   id: string
@@ -67,7 +68,7 @@ export default function EditDocumentScreen() {
       if (asset.size && asset.size > MAX_FILE_BYTES) {
         setFileMsg({
           type: 'error',
-          text: `File too large (${(asset.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`,
+          text: `File too large (${formatFileSize(asset.size)}). Max 3 MB.`,
         })
         return
       }
@@ -330,7 +331,7 @@ export default function EditDocumentScreen() {
                   </Text>
                   {currentFile.fileSize != null && (
                     <Text style={styles.fileRowMeta}>
-                      {(currentFile.fileSize / 1024 / 1024).toFixed(2)} MB
+                      {formatFileSize(currentFile.fileSize)}
                     </Text>
                   )}
                 </View>

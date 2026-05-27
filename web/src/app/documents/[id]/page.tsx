@@ -15,6 +15,7 @@ import Navbar from '@/components/navbar'
 import CategoryBadge from '@/components/category-badge'
 import DeleteDocumentButton from '@/components/delete-document-button'
 import { getSession } from '@/lib/auth'
+import { formatFileSize } from '@/lib/format'
 import { getDocumentById, incrementViewCount } from '@/services/documentService'
 
 export async function generateMetadata({
@@ -193,7 +194,7 @@ export default async function DocumentDetailPage({
                   <span className="truncate">Download File</span>
                   {document.fileSize && (
                     <span className="text-indigo-400 flex-shrink-0">
-                      ({(document.fileSize / 1024 / 1024).toFixed(1)} MB)
+                      ({formatFileSize(document.fileSize)})
                     </span>
                   )}
                 </a>

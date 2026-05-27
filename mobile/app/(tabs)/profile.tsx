@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '../../context/AuthContext'
@@ -15,17 +16,24 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth()
 
   async function handleLogout() {
-    Alert.alert('Logout', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout()
-          router.replace('/(auth)/login')
-        },
-      },
-    ])
+    const confirmed =
+      Platform.OS === 'web'
+        ? (globalThis as unknown as { confirm: (m: string) => boolean }).confirm(
+            'Are you sure you want to log out?'
+          )
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert('Logout', 'Are you sure you want to log out?', [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: () => resolve(true),
+              },
+            ])
+          })
+    if (!confirmed) return
+    await logout()
+    router.replace('/(auth)/login')
   }
 
   return (

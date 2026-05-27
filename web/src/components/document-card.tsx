@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FileText, Eye, Calendar, Edit, Trash2, Globe, Lock } from 'lucide-react'
+import { FileText, Eye, Calendar, Edit, Trash2, Globe, Lock, Paperclip } from 'lucide-react'
 import clsx from 'clsx'
 import CategoryBadge from './category-badge'
 import DeleteModal from './delete-modal'
+import { formatFileSize } from '@/lib/format'
 
 type DocumentCardProps = {
   document: {
@@ -20,6 +21,9 @@ type DocumentCardProps = {
     categoryColor?: string | null
     tags?: string[] | null
     userId: string
+    fileUrl?: string | null
+    fileName?: string | null
+    fileSize?: number | null
   }
   currentUserId?: string
   onDelete?: (id: string) => void
@@ -135,6 +139,23 @@ export default function DocumentCard({
               </>
             )}
           </span>
+
+          {document.fileUrl && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700"
+              title={
+                document.fileName
+                  ? `${document.fileName}${
+                      document.fileSize
+                        ? ` · ${formatFileSize(document.fileSize)}`
+                        : ''
+                    }`
+                  : 'Has attached file'
+              }
+            >
+              <Paperclip className="w-3 h-3" /> File
+            </span>
+          )}
 
           {document.tags
             ?.slice(0, 3)

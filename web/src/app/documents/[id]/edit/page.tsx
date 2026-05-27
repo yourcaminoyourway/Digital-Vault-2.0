@@ -174,6 +174,7 @@ export default function EditDocumentPage({
         )
         setNewFile(null)
         setFileMsg({ type: 'success', text: 'File uploaded successfully.' })
+        router.refresh()
       }
     } catch {
       setFileMsg({ type: 'error', text: 'Network error. Please try again.' })
@@ -203,6 +204,8 @@ export default function EditDocumentPage({
             : prev
         )
         setFileMsg({ type: 'success', text: 'File removed.' })
+        // Invalidate the detail page cache so the Download button disappears
+        router.refresh()
       }
     } catch {
       setFileMsg({ type: 'error', text: 'Network error. Please try again.' })

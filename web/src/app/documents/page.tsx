@@ -20,6 +20,9 @@ type Document = {
   categoryColor: string | null
   tags: string[] | null
   userId: string
+  fileUrl: string | null
+  fileName: string | null
+  fileSize: number | null
 }
 
 type Category = {

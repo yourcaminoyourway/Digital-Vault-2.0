@@ -272,4 +272,4 @@ The mobile web build hits the live web API (URL hard-coded in `mobile/constants/
 - **AGENTS.md** describes architectural conventions for AI dev tools
 - **No external secrets in repo** — all secrets live in Netlify / `.env.local`
 
-Built end-to-end with AI-assisted development (Claude Code).
+Built end-to-end with AI-assisted development (Claude Code). Deployed on netlify.com
